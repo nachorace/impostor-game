@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Juego Impostor</title>
+</head>
+<body>
+    <div id="welcome">
+        <h2>Unirse a la sala</h2>
+        <p id="info">Si sos el primero, crearás la sala.</p>
+        <input id="password" type="text" placeholder="Contraseña de sala">
+        <input id="name" type="text" placeholder="Tu nombre">
+        <button id="joinBtn">Unirse</button>
+        <p id="error" style="color: red;"></p>
+    </div>
+
+    <div id="game" style="display:none;">
+        <h1>Juego Impostor</h1>
+        <p id="hostNotice" style="color: green;"></p>
+        <p id="playerList"></p>
+        <button id="startBtn" style="display:none;">Iniciar Partida</button>
+        <button id="restartBtn" style="display:none;">Reiniciar</button>
+        <h2 id="roleDisplay"></h2>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        const joinBtn = document.getElementById('joinBtn');
+        const passwordInput = document.getElementById('password');
+        const nameInput = document.getElementById('name');
+        const errorText = document.getElementById('error');
+        const welcomeDiv = document.getElementById('welcome');
+        const gameDiv = document.getElementById('game');
+        const hostNotice = document.getElementById('hostNotice');
+        const playerList = document.getElementById('playerList');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const roleDisplay = document.getElementById('roleDisplay');
+
+        joinBtn.addEventListener('click', () => {
+            const password = passwordInput.value.trim();
+            const name = nameInput.value.trim();
+            if (!password || !name) {
+                errorText.textContent = 'Debes ingresar contraseña y nombre';
+                return;
+            }
+            socket.emit('joinRoom', { password, name });
+        });
+
+        socket.on('wrongPassword', () => {
+            errorText.textContent = 'Contraseña incorrecta';
+        });
+
+        socket.on('setHost', () => {
+            hostNotice.textContent = 'Sos el ANFITRIÓN';
+            startBtn.style.display = 'inline-block';
+            restartBtn.style.display = 'inline-block';
+        });
+
+        socket.on('playersUpdate', (players) => {
+            welcomeDiv.style.display = 'none';
+            gameDiv.style.display = 'block';
+            const names = players.map(p => p.name).join(', ');
+            playerList.textContent = `Jugadores: ${names}`;
+        });
+
+        startBtn.addEventListener('click', () => {
+            socket.emit('startGame');
+        });
+
+        restartBtn.addEventListener('click', () => {
+            socket.emit('restartGame');
+        });
+
+        socket.on('roleAssignment', (data) => {
+            roleDisplay.textContent = `Tu rol: ${data.role}`;
+        });
+
+        socket.on('resetGame', () => {
+            roleDisplay.textContent = '';
+        });
+
+        socket.on('gameError', (msg) => {
+            alert(msg);
+        });
+    </script>
+</body>
+</html>
